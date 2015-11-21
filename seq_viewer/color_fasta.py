@@ -7,7 +7,7 @@ from __future__ import print_function
 
 import argparse
 import re
-from colored import bg, fg, attr
+from colored import fg, attr
 
 
 def parse_args():
@@ -20,27 +20,37 @@ def parse_args():
 
 def main():
     args = parse_args()
-    robj_A = re.compile('A+')
-    robj_T = re.compile('T+')
-    robj_G = re.compile('G+')
-    robj_C = re.compile('C+')
 
-    A_str = r'{}\g<0>{}'.format(fg('green'), attr(0))
-    T_str = r'{}\g<0>{}'.format(fg('red'), attr(0))
-    G_str = r'{}\g<0>{}'.format(fg('yellow'), attr(0))
-    C_str = r'{}\g<0>{}'.format(fg('cyan'), attr(0))
+    color_A = '#d70000'
+    color_T = '#ffaf5f'
+    color_G = '#00ffff'
+    color_C = '#0087af'
+
+    def change_color(color):
+        def repl(m):
+            """Replace characters with blocks of the same length
+            """
+            return fg(color) + u'\u258D'*len(m.group(0)) + attr(0)
+        return repl
+
+    print(u'Legend: {}\u2588A{}  {}\u2588T{}  '
+          u'{}\u2588G{}  {}\u2588C{}'.format(fg(color_A), attr(0),
+                                             fg(color_T), attr(0),
+                                             fg(color_G), attr(0),
+                                             fg(color_C), attr(0)))
 
     with open(args.fasta) as fi:
         for line in fi:
             line = line.rstrip()
             if line.startswith('>'):
-                print(fg('black') + bg('grey_74') + line + attr(0))
+                print(line)
             else:
                 line.upper()
-                line = robj_A.sub(A_str, line)
-                line = robj_T.sub(T_str, line)
-                line = robj_G.sub(G_str, line)
-                line = robj_C.sub(C_str, line)
+                line = re.sub('A+', change_color(color_A), line)
+                line = re.sub('T+', change_color(color_T), line)
+                line = re.sub('G+', change_color(color_G), line)
+                line = re.sub('C+', change_color(color_C), line)
+
                 print(line)
 
 
