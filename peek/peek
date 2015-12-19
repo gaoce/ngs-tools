@@ -1,0 +1,96 @@
+#!/usr/bin/env python3
+"""Peek reads stdin (from a pipe), print the first 12 columns with fixed width
+"""
+import sys
+import re
+import os
+
+if sys.version_info < (3, 3):
+    print("Python 3.3+ required!")
+    sys.exit(1)
+
+WIDTH = os.get_terminal_size().columns - 2
+
+DEFAULT_DELIM = r'[ \t]+'
+MAX_COLS = 12
+MAX_ROWS = 100
+
+
+class LineFixer():
+
+    def __init__(self, line_cache):
+        self.line_cache = line_cache
+        self.splitter = re.compile(DEFAULT_DELIM)
+        self.analyze_line()
+        self.adjust_width()
+
+    def analyze_line(self):
+        """Go thru lines in a list, calculate the maximum width for each field
+        """
+
+        widths = []
+        for line in self.line_cache:
+            fields = self.splitter.split(line)
+            widths.append(map(len, fields))
+
+        max_widths = []
+        for i, col in enumerate(zip(*widths)):
+            max_widths.append(max(col))
+
+            if i == MAX_COLS - 1:
+                # Only calcualte the first MAX_COLS fields
+                break
+
+        self.max_widths = max_widths
+        # Attemp to adjust the distribution
+        # median = log(sorted(max_widths)[len(max_widths) // 2])
+        # self.max_widths = [w-1 if log(w)>median else w+1 for w in max_widths]
+
+    def adjust_width(self):
+        """Given the maximum width for each field (based on sampling) and
+        terminal size, calculate the proportional widths for the fields
+        """
+
+        max_widths = self.max_widths
+        total_width = sum(max_widths) + len(max_widths) - 1
+
+        if total_width < WIDTH:
+            # The total width is already smaller than the terminal size
+            self.col_widths = [int(w) for w in self.max_widths]
+        else:
+            col_widths = [round(w / total_width * WIDTH) if w > 1 else 1
+                          for w in self.max_widths]
+
+            median = sorted(col_widths)[len(col_widths)//2]
+            self.col_widths = [w+1 if w < median else w-1 for w in col_widths]
+
+    def fix_line(self, line):
+        """Given line and column width, print the line with fixed width fields
+        """
+
+        fields_fixed = []
+        fields = self.splitter.split(line)
+
+        for width, field in zip(self.col_widths[:MAX_COLS], fields[:MAX_COLS]):
+            fields_fixed.append("{:{width}.{width}}".format(field, width=width))
+
+        print(' '.join(fields_fixed))
+
+
+if __name__ == '__main__':
+    # Cache MAX_ROWS lines as a sample, analyze the maximum field widths
+    line_cache = []
+    for line_num, line_txt in enumerate(sys.stdin):
+        line_cache.append(line_txt)
+        if line_num == MAX_ROWS:
+            break
+
+    fixer = LineFixer(line_cache)
+
+    # First print out the line already analyzed
+    for line in line_cache:
+        fixer.fix_line(line)
+
+    # Print out the remaining lines
+    for line in sys.stdin:
+        fixer.fix_line(line)
