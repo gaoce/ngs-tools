@@ -61,8 +61,9 @@ class LineFixer():
             col_widths = [round(w / total_width * WIDTH) if w > 1 else 1
                           for w in self.max_widths]
 
-            median = sorted(col_widths)[len(col_widths)//2]
-            self.col_widths = [w+1 if w < median else w-1 for w in col_widths]
+            median = sorted(col_widths)[len(col_widths) // 2]
+            self.col_widths = [w + 1 if w < median else w - 1
+                               for w in col_widths]
 
     def fix_line(self, line):
         """Given line and column width, print the line with fixed width fields
@@ -72,7 +73,8 @@ class LineFixer():
         fields = self.splitter.split(line)
 
         for width, field in zip(self.col_widths[:MAX_COLS], fields[:MAX_COLS]):
-            fields_fixed.append("{:{width}.{width}}".format(field, width=width))
+            fields_fixed.append(
+                "{:{width}.{width}}".format(field, width=width))
 
         print(' '.join(fields_fixed))
 
